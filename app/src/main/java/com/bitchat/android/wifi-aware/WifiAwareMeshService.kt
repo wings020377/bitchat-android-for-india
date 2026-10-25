@@ -622,7 +622,7 @@ class WifiAwareMeshService(private val context: Context) : MeshService, Transpor
                 try { oldPublishSession?.close() } catch (_: Exception) { }
                 try { oldSubscribeSession?.close() } catch (_: Exception) { }
                 try { oldWifiAwareSession?.close() } catch (_: Exception) { }
-                if (generation == sessionGeneration.get() && !isActive) {
+                if (generation == sessionGeneration.get() && !this@WifiAwareMeshService.isActive) {
                     if (publishSession === oldPublishSession) publishSession = null
                     if (subscribeSession === oldSubscribeSession) subscribeSession = null
                     if (wifiAwareSession === oldWifiAwareSession) wifiAwareSession = null
@@ -633,6 +633,11 @@ class WifiAwareMeshService(private val context: Context) : MeshService, Transpor
                     ingressLinks.clear()
                 }
             } finally {
+                if (generation == sessionGeneration.get() && !this@WifiAwareMeshService.isActive) {
+                    // Publish inactivity while recovery still prevents this instance
+                    // restarting, so a completed old cleanup cannot hide a new start.
+                    WifiAwareController.onServiceInactive(this@WifiAwareMeshService)
+                }
                 recoveryInProgress = false
                 // Recovery cleanup is done; nudge a restart now that startServices() will no
                 // longer be deferred by recoveryInProgress. The controller coalesces requests.
